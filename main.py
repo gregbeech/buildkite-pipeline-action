@@ -70,12 +70,11 @@ def trigger_pipeline(context: ActionContext) -> dict:
         "commit": context.commit,
         "branch": context.branch,
         "message": context.message,
-        "author": {
-            "name": context.author
-        },
+        "author": context.author,
         "env": context.env
     }
     data = bytes(json.dumps(payload), encoding="utf-8")
+    print(f"🐛 Sending: {data}")
     req = request.Request(url, method="POST", headers=headers, data=data)
     return http_send(req, context, test_response="create_build")
 
