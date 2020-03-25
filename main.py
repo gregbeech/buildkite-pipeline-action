@@ -9,7 +9,7 @@ from urllib import request
 
 @dataclass
 class ActionContext:
-    author: str
+    author: Dict[str, str]
     access_token: str
     pipeline: str
     branch: str
@@ -34,7 +34,7 @@ class ActionContext:
         )
 
     @staticmethod
-    def __author(event_path: str):
+    def __author(event_path: str) -> Dict[str, str]:
         with open(event_path, "rb") as event_file:
             event_data = json.load(event_file)
             return event_data.get("pusher", {})
@@ -74,7 +74,6 @@ def trigger_pipeline(context: ActionContext) -> dict:
         "env": context.env
     }
     data = bytes(json.dumps(payload), encoding="utf-8")
-    print(f"🐛 Sending: {data}")
     req = request.Request(url, method="POST", headers=headers, data=data)
     return http_send(req, context, test_response="create_build")
 
