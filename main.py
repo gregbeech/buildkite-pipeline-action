@@ -39,13 +39,11 @@ def main():
 
     print(f"🪁 Triggering {context.pipeline} for {context.branch}@{context.commit}", flush=True)
     build_info = trigger_pipeline(context)
-    print(f"🔗 Build started → {build_info['web_url']}", flush=True)
+    state = report_build_state(build_info)
 
     if not context.is_async:
         build_info = wait_for_build(build_info["url"], context)
-
-    state = build_info["state"]
-    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}", flush=True)
+        state = report_build_state(build_info)
 
     print(f"::set-output name=id::{build_info['id']}")
     print(f"::set-output name=number::{build_info['number']}")
@@ -55,7 +53,13 @@ def main():
     print(f"::set-output name=data::{json.dumps(build_info)}")
 
     if state not in ["scheduled", "running", "passed"]:
-        raise RuntimeError(f"Build failed with state {state}")
+        raise RuntimeError(f"Pipeline failed with state '{state}'")
+
+
+def report_build_state(build_info: dict) -> str:
+    state = build_info["state"]
+    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}", flush=True)
+    return state
 
 
 def trigger_pipeline(context: ActionContext) -> dict:
@@ -99,7 +103,7 @@ def pipeline_url(pipeline: str) -> str:
 
 def state_emoji(state: str) -> str:
     return {
-        "scheduled": "⏱️️",
+        "scheduled": "🔗️",
         "running": "🏃",
         "passed": "💚",
     }.get(state, "💔")
