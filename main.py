@@ -37,15 +37,15 @@ class ActionContext:
 def main():
     context = ActionContext.from_env(os.environ)
 
-    print(f"🪁 Triggering {context.pipeline} for {context.branch}@{context.commit}")
+    print(f"🪁 Triggering {context.pipeline} for {context.branch}@{context.commit}", flush=True)
     build_info = trigger_pipeline(context)
-    print(f"🔗 Build started → {build_info['web_url']}")
+    print(f"🔗 Build started → {build_info['web_url']}", flush=True)
 
     if not context.is_async:
         build_info = wait_for_build(build_info["url"], context)
 
     state = build_info["state"]
-    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}")
+    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}", flush=True)
 
     print(f"::set-output name=id::{build_info['id']}")
     print(f"::set-output name=number::{build_info['number']}")
@@ -80,11 +80,11 @@ def wait_for_build(url: str, context: ActionContext) -> dict:
     req = request.Request(url, method="GET", headers=headers)
     last_status = datetime.now()
     build_info = {}
-    print(f"⌛ Waiting for build to finish")
+    print(f"⌛ Waiting for build to finish", flush=True)
     while not build_info.get("finished_at"):
         time.sleep(15)
         if (datetime.now() - last_status).total_seconds() > 60:
-            print(f"⌛ Still waiting for build to finish")
+            print(f"⌛ Still waiting for build to finish", flush=True)
             last_status = datetime.now()
         build_info = http_send(req, context, test_response="build_passed")
     return build_info
