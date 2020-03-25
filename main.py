@@ -17,6 +17,7 @@ class ActionContext:
     message: str
     env: Dict[str, str]
     is_async: bool
+    is_test_mode: bool
 
     @staticmethod
     def from_env(env: Dict[str, str]) -> "ActionContext":
@@ -28,7 +29,8 @@ class ActionContext:
             commit=env["INPUT_COMMIT"],
             message=env["INPUT_MESSAGE"],
             env=json.loads(env.get("INPUT_ENV") or "{}"),
-            is_async=env.get("INPUT_ASYNC", "false").lower() == "true"
+            is_async=env.get("INPUT_ASYNC", "false").lower() == "true",
+            is_test_mode=env.get("TEST_MODE", "false").lower() == "true",
         )
 
 
@@ -37,12 +39,13 @@ def main():
 
     print(f"🪁 Triggering {context.pipeline} for {context.branch}@{context.commit}")
     build_info = trigger_pipeline(context)
-    print(f"🔗 Build started: {build_info['web_url']}")
+    print(f"🔗 Build started → {build_info['web_url']}")
 
-    state = "started"  # pseudo-state for async builds
     if not context.is_async:
-        build_info = wait_for_build(build_info["url"], access_token=context.access_token)
-        state = build_info["state"]
+        build_info = wait_for_build(build_info["url"], context)
+
+    state = build_info["state"]
+    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}")
 
     print(f"::set-output name=id::{build_info['id']}")
     print(f"::set-output name=number::{build_info['number']}")
@@ -51,7 +54,7 @@ def main():
     print(f"::set-output name=state::{state}")
     print(f"::set-output name=data::{json.dumps(build_info)}")
 
-    if state not in ["started", "passed"]:
+    if state not in ["scheduled", "running", "passed"]:
         raise RuntimeError(f"Build failed with state {state}")
 
 
@@ -69,26 +72,22 @@ def trigger_pipeline(context: ActionContext) -> dict:
     }
     data = bytes(json.dumps(payload), encoding="utf-8")
     req = request.Request(url, method="POST", headers=headers, data=data)
-    res = request.urlopen(req, timeout=10)
-    return json.loads(res.read())
+    return http_send(req, context, test_response="create_build")
 
 
-def wait_for_build(url: str, *, access_token: str) -> dict:
-    headers = {"Authorization": f"Bearer {access_token}"}
+def wait_for_build(url: str, context: ActionContext) -> dict:
+    headers = {"Authorization": f"Bearer {context.access_token}"}
     req = request.Request(url, method="GET", headers=headers)
     last_status = datetime.now()
-    finished_at = None
-    data = {}
+    build_info = {}
     print(f"⌛ Waiting for build to finish")
-    while not finished_at:
+    while not build_info.get("finished_at"):
         time.sleep(15)
         if (datetime.now() - last_status).total_seconds() > 60:
             print(f"⌛ Still waiting for build to finish")
             last_status = datetime.now()
-        res = request.urlopen(req, timeout=10)
-        data = json.loads(res.read())
-        finished_at = data["finished_at"]
-    return data
+        build_info = http_send(req, context, test_response="build_passed")
+    return build_info
 
 
 def pipeline_url(pipeline: str) -> str:
@@ -96,6 +95,22 @@ def pipeline_url(pipeline: str) -> str:
     if (not organization) or (not pipeline) or ("/" in pipeline):
         raise ValueError("pipeline must be in the form 'organization/pipeline'")
     return f"https://api.buildkite.com/v2/organizations/{organization}/pipelines/{pipeline}/builds"
+
+
+def state_emoji(state: str) -> str:
+    return {
+        "scheduled": "⏱️️",
+        "running": "🏃",
+        "passed": "💚",
+    }.get(state, "💔")
+
+
+def http_send(req: request.Request, context: ActionContext, *, test_response: str) -> dict:
+    if context.is_test_mode:
+        res = open(f"./test_responses/{test_response}.json", "rb")
+    else:
+        res = request.urlopen(req, timeout=10)
+    return json.loads(res.read())
 
 
 if __name__ == "__main__":

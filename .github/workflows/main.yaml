@@ -6,13 +6,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
-    - name: run
+    - name: Trigger pipeline
       id: run
       uses: ./
       with:
-        access_token: REDACTED
-        pipeline: test/test
-        branch: test
-        env: '{"FOO":"BAR"}'
-    - name: status
+        access_token: fake_access_token
+        pipeline: example-org/example-pipeline
+        branch: example-branch
+        env: '{"TARGET":"QA"}'
+      env:
+        TEST_MODE: true
+    - name: Report build status
       run: echo "Build ${{ steps.run.outputs.id }} ${{ steps.run.outputs.state }}"
