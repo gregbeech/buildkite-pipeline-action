@@ -1,0 +1,44 @@
+# action.yml
+name: 'Buildkite Pipeline'
+description: 'Trigger a Buildkite pipeline'
+inputs:
+  access_token:
+    description: 'Access token to authorise requests to Buildkite'
+    required: true
+  pipeline:
+    description: 'Name of the pipeline to build'
+    required: true
+  branch:
+    description: 'Name of the branch to build'
+    required: true
+    default: 'master'
+  commit:
+    description: 'The commit to build'
+    required: true
+    default: 'HEAD'
+  message:
+    description: 'The message for the build'
+    required: false
+    default: ":github: Triggered by GitHub Action"
+  env:
+    description: 'Environment variables for the Buildkite pipeline'
+    required: false
+  async:
+    description: 'If true then the action does not wait for the build to complete'
+    required: false
+outputs:
+  id:
+    description: 'The identifier of the build'
+  number:
+    description: 'The build number'
+  url:
+    description: 'The API URL of the build'
+  web_url:
+    description: 'The web URL of the build'
+  state:
+    description: 'The state of the build'
+  data:
+    description: 'The raw data about the build in JSON format'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
