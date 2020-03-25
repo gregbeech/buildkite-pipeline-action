@@ -22,16 +22,29 @@ class ActionContext:
     @staticmethod
     def from_env(env: Dict[str, str]) -> "ActionContext":
         return ActionContext(
-            author=env["GITHUB_ACTOR"],
+            author=ActionContext.__author(env["GITHUB_EVENT_PATH"]),
             access_token=env["INPUT_ACCESS_TOKEN"],
             pipeline=env["INPUT_PIPELINE"],
-            branch=env["INPUT_BRANCH"],
-            commit=env["INPUT_COMMIT"],
+            branch=env.get("INPUT_BRANCH") or ActionContext.__branch(env["GITHUB_REF"]),
+            commit=env.get("INPUT_COMMIT") or env["GITHUB_SHA"],
             message=env["INPUT_MESSAGE"],
             env=json.loads(env.get("INPUT_ENV") or "{}"),
             is_async=env.get("INPUT_ASYNC", "false").lower() == "true",
             is_test_mode=env.get("TEST_MODE", "false").lower() == "true",
         )
+
+    @staticmethod
+    def __author(event_path: str):
+        with open(event_path, "rb") as event_file:
+            event_data = json.load(event_file)
+            return event_data.get("pusher", {})
+
+    @staticmethod
+    def __branch(git_ref: str) -> str:
+        prefix = "refs/heads/"
+        if git_ref.startswith(prefix):
+            return git_ref[len(prefix):]
+        return git_ref
 
 
 def main():

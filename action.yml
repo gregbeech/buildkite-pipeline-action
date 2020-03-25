@@ -1,44 +1,43 @@
-# action.yml
 name: 'Buildkite Pipeline'
 description: 'Trigger a Buildkite pipeline'
 inputs:
   access_token:
-    description: 'Access token to authorise requests to Buildkite'
+    description: 'A Buildkite access token which must have the `write_builds` permission, and if you want to wait for the builds to complete also needs the `read_builds` permission.'
     required: true
   pipeline:
-    description: 'Name of the pipeline to build'
+    description: 'Name of the pipeline to trigger, in the format `organization/pipeline.'
     required: true
   branch:
-    description: 'Name of the branch to build'
+    description: 'Name of the branch to build.'
     required: true
-    default: 'master'
+    default: ''
   commit:
-    description: 'The commit to build'
+    description: 'The commit to build.'
     required: true
-    default: 'HEAD'
+    default: ''
   message:
-    description: 'The message for the build'
+    description: 'The message to associate with the build.'
     required: false
-    default: ":github: Triggered by GitHub Action"
+    default: ':github: Triggered by GitHub Action'
   env:
-    description: 'Environment variables for the Buildkite pipeline'
+    description: 'Environment variables to pass to the Buildkite build in JSON format.'
     required: false
   async:
-    description: 'If true then the action does not wait for the build to complete'
+    description: 'If true then the action does not wait for the build to complete.'
     required: false
 outputs:
   id:
-    description: 'The identifier of the build'
+    description: 'The identifier of the build.'
   number:
-    description: 'The build number'
+    description: 'The build number.'
   url:
-    description: 'The API URL of the build'
+    description: 'The API URL of the build.'
   web_url:
-    description: 'The web URL of the build'
+    description: 'The web URL of the build.'
   state:
-    description: 'The state of the build'
+    description: 'The state of the build.'
   data:
-    description: 'The raw data about the build in JSON format'
+    description: 'The raw data about the build in JSON format.'
 runs:
   using: 'docker'
   image: 'Dockerfile'
