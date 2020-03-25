@@ -45,21 +45,9 @@ def main():
         build_info = wait_for_build(build_info["url"], context)
         state = report_build_state(build_info)
 
-    print(f"::set-output name=id::{build_info['id']}")
-    print(f"::set-output name=number::{build_info['number']}")
-    print(f"::set-output name=url::{build_info['url']}")
-    print(f"::set-output name=web_url::{build_info['web_url']}")
-    print(f"::set-output name=state::{state}")
-    print(f"::set-output name=data::{json.dumps(build_info)}")
-
+    output_build_info(build_info)
     if state not in ["scheduled", "running", "passed"]:
         raise RuntimeError(f"Pipeline failed with state '{state}'")
-
-
-def report_build_state(build_info: dict) -> str:
-    state = build_info["state"]
-    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}", flush=True)
-    return state
 
 
 def trigger_pipeline(context: ActionContext) -> dict:
@@ -94,11 +82,26 @@ def wait_for_build(url: str, context: ActionContext) -> dict:
     return build_info
 
 
+def output_build_info(build_info: dict) -> None:
+    print(f"::set-output name=id::{build_info['id']}")
+    print(f"::set-output name=number::{build_info['number']}")
+    print(f"::set-output name=url::{build_info['url']}")
+    print(f"::set-output name=web_url::{build_info['web_url']}")
+    print(f"::set-output name=state::{build_info['state']}")
+    print(f"::set-output name=data::{json.dumps(build_info)}")
+
+
 def pipeline_url(pipeline: str) -> str:
     organization, pipeline = pipeline.split("/", maxsplit=1)
     if (not organization) or (not pipeline) or ("/" in pipeline):
         raise ValueError("pipeline must be in the form 'organization/pipeline'")
     return f"https://api.buildkite.com/v2/organizations/{organization}/pipelines/{pipeline}/builds"
+
+
+def report_build_state(build_info: dict) -> str:
+    state = build_info["state"]
+    print(f"{state_emoji(state)} Build {state} → {build_info['web_url']}", flush=True)
+    return state
 
 
 def state_emoji(state: str) -> str:
