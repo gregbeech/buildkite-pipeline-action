@@ -25,7 +25,7 @@ class ActionContext:
             author=ActionContext.__author(env["GITHUB_EVENT_PATH"]),
             access_token=env["INPUT_ACCESS_TOKEN"],
             pipeline=env["INPUT_PIPELINE"],
-            branch=env.get("INPUT_BRANCH") or ActionContext.__branch(env["GITHUB_REF"]),
+            branch=env.get("INPUT_BRANCH") or ActionContext.__branch(env),
             commit=env.get("INPUT_COMMIT") or env["GITHUB_SHA"],
             message=env["INPUT_MESSAGE"],
             env=json.loads(env.get("INPUT_ENV") or "{}"),
@@ -40,10 +40,16 @@ class ActionContext:
             return event_data.get("pusher", {})
 
     @staticmethod
-    def __branch(git_ref: str) -> str:
+    def __branch(env: Dict[str, str]) -> str:
+        head_ref = env.get("GITHUB_HEAD_REF")  # branch name on pull requests
+        if head_ref:
+            return head_ref
+
+        git_ref = env["GITHUB_REF"]
         prefix = "refs/heads/"
         if git_ref.startswith(prefix):
             return git_ref[len(prefix):]
+
         return git_ref
 
 

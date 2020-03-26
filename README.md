@@ -4,7 +4,7 @@ This action triggers a [https://buildkite.com/](Buildkite) pipeline and (by defa
 
 ## Why not use the official action?
 
-The [official Buildkite action](https://github.com/buildkite/trigger-pipeline-action) appears to be abandoned as it hasn't had any changes in nearly a year, and is missing essential functionality such as the ability to wait until a pipeline is finished.
+The [official Buildkite action](https://github.com/buildkite/trigger-pipeline-action) appears to be abandoned as it hasn't had any changes in nearly a year, is missing essential functionality such as the ability to wait until a pipeline is finished, and has a number of bugs such as using the wrong branch name on `pull_request` events.
 
 ## Inputs
 
