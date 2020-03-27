@@ -150,9 +150,10 @@ def state_emoji(state: str) -> str:
 
 def http_send(req: request.Request, context: ActionContext, *, test_response: str) -> dict:
     if context.is_test_mode:
-        print("🐛 Stubbing HTTP request in test mode:")
-        print(f"  {req.method} {req.full_url}")
-        print(f"  {req.data}")
+        print("🚧 Stubbing HTTP request in test mode:")
+        print(f"🚧   {req.method} {req.full_url}")
+        if req.data:
+            print(f"🚧   {req.data.decode('utf-8')}")
         res = open(f"./test_responses/{test_response}.json", "rb")
     else:
         res = request.urlopen(req, timeout=10)
