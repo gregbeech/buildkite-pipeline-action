@@ -3,8 +3,15 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Optional
 from urllib import request
+
+
+@dataclass
+class PullRequestContext:
+    number: int
+    base_branch: str
+    repository: str
 
 
 @dataclass
@@ -16,28 +23,26 @@ class ActionContext:
     commit: str
     message: str
     env: Dict[str, str]
+    pull_request: Optional[PullRequestContext]
     is_async: bool
     is_test_mode: bool
 
     @staticmethod
     def from_env(env: Dict[str, str]) -> "ActionContext":
-        return ActionContext(
-            author=ActionContext.__author(env["GITHUB_EVENT_PATH"]),
-            access_token=env["INPUT_ACCESS_TOKEN"],
-            pipeline=env["INPUT_PIPELINE"],
-            branch=env.get("INPUT_BRANCH") or ActionContext.__branch(env),
-            commit=env.get("INPUT_COMMIT") or env["GITHUB_SHA"],
-            message=env["INPUT_MESSAGE"],
-            env=json.loads(env.get("INPUT_ENV") or "{}"),
-            is_async=env.get("INPUT_ASYNC", "false").lower() == "true",
-            is_test_mode=env.get("TEST_MODE", "false").lower() == "true",
-        )
-
-    @staticmethod
-    def __author(event_path: str) -> Dict[str, str]:
-        with open(event_path, "rb") as event_file:
-            event_data = json.load(event_file)
-            return event_data.get("pusher", {})
+        with open(env["GITHUB_EVENT_PATH"], "rb") as event_file:
+            event = json.load(event_file)
+            return ActionContext(
+                author=event.get("pusher", {}),
+                access_token=env["INPUT_ACCESS_TOKEN"],
+                pipeline=env["INPUT_PIPELINE"],
+                branch=env.get("INPUT_BRANCH") or ActionContext.__branch(env),
+                commit=env.get("INPUT_COMMIT") or env["GITHUB_SHA"],
+                message=env["INPUT_MESSAGE"],
+                pull_request=ActionContext.__pull_request_context(event),
+                env=json.loads(env.get("INPUT_ENV") or "{}"),
+                is_async=env.get("INPUT_ASYNC", "false").lower() == "true",
+                is_test_mode=env.get("TEST_MODE", "false").lower() == "true",
+            )
 
     @staticmethod
     def __branch(env: Dict[str, str]) -> str:
@@ -51,6 +56,16 @@ class ActionContext:
             return git_ref[len(prefix):]
 
         return git_ref
+
+    @staticmethod
+    def __pull_request_context(event: dict) -> Optional[PullRequestContext]:
+        pull_request = event.get("pull_request")
+        if pull_request:
+            return PullRequestContext(
+                number=pull_request["number"],
+                base_branch=pull_request["base"]["ref"],
+                repository=pull_request["head"]["repo"]["git_url"]
+            )
 
 
 def main():
@@ -79,6 +94,10 @@ def trigger_pipeline(context: ActionContext) -> dict:
         "author": context.author,
         "env": context.env
     }
+    if context.pull_request:
+        payload["pull_request_base_branch"] = context.pull_request.base_branch
+        payload["pull_request_id"] = context.pull_request.number
+        payload["pull_request_repository"] = context.pull_request.repository
     data = bytes(json.dumps(payload), encoding="utf-8")
     req = request.Request(url, method="POST", headers=headers, data=data)
     return http_send(req, context, test_response="create_build")
@@ -131,6 +150,9 @@ def state_emoji(state: str) -> str:
 
 def http_send(req: request.Request, context: ActionContext, *, test_response: str) -> dict:
     if context.is_test_mode:
+        print("🐛 Stubbing HTTP request in test mode:")
+        print(f"  {req.method} {req.full_url}")
+        print(f"  {req.data}")
         res = open(f"./test_responses/{test_response}.json", "rb")
     else:
         res = request.urlopen(req, timeout=10)
