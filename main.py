@@ -92,7 +92,8 @@ def trigger_pipeline(context: ActionContext) -> dict:
         "branch": context.branch,
         "message": context.message,
         "author": context.author,
-        "env": context.env
+        "env": context.env,
+        "ignore_pipeline_branch_filters": True
     }
     if context.pull_request:
         payload["pull_request_base_branch"] = context.pull_request.base_branch
